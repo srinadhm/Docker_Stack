@@ -159,6 +159,14 @@ FROM adoptopenjdk/openjdk11
 COPY target/springboot-docker-assignment-without-database-1.0-SNAPSHOT.jar app.jar
 ENTRYPOINT ["java","-jar","/app.jar"]
 
+
+
+FROM instruction which we mentioned the image name it  will pull from the docker hub
+
+COPY instruction is similar to cp 
+
+ENTRYPOINT is something if we want to execute any command in the terminal or shell.
+
 [root@dev-server springboot-docker-assignment-without-database]# docker image build -t srinadhdocker/springboot-docker .
 Sending build context to Docker daemon  35.37MB
 Step 1/3 : FROM adoptopenjdk/openjdk11
