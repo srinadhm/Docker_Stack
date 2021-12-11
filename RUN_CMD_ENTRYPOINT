@@ -1,0 +1,182 @@
+"/bin/sh -c 'echo \"H…"  
+
+shell form ---> <instruction> <command>
+exec form ---> <instruction> ["executable", "param1", "param2", ...]
+
+1.shell form 
+ 
+FROM ubuntu
+RUN apt-get update -y
+ENV Name Srinadh
+ENTRYPOINT echo "Hello $Name" ---> /bin/sh -c
+
+2.exec form 
+
+FROM ubuntu # pulling the ubuntu image from docker hub
+RUN apt-get update -y  # RUN command used to execute/install packages 
+ENV Name Srinadh # setting env variable and passing value 
+ENTRYPOINT ["/bin/echo", "Hello, $Name"] #used for executable, it cant be overridden while running container.
+ENTRYPOINT ["/bin/echo",  "Hello $Name"] ---> it wont read the env variable internally it wont use /bin/sh -c we need to mention shell and command 
+ENTRYPOINT ["/bin/bash", "-c",  "echo Hello, $Name"] ---- now it will assume bash shell and command then reads the value and assign to name variable
+
+
+1.Write the docker file
+2.Build the image from docker file
+3.Run the container from docker image
+4.Access the application
+
+We can install multiple packages using RUN , usually we will use shell form only.RUN and ENV instruction uses cache to run the next build
+
+2.CMD instruction 
+CMD : CMD instruction allows you to set a default command , which will be executed only when you run container without specifying a command .If docker container runs with a command the default command will be ignored
+
+
+FROM ubuntu
+RUN apt-get update -y
+CMD echo "Hello World"  ---> shell form internally calls /bin/sh -c "/bin/sh -c 'echo \"Hello World" 
+
+root@ip-172-31-83-190:~/cmd-entrypoint# docker run -t --name=cmdcontainer cmdimage (we are not passing any command or instruction)
+Hello World
+
+docker run -it --name=cmdcontainer1 cmdimage ls (we are  passing ls  command or instruction)
+bin   dev  home  lib32  libx32  mnt  proc  run   srv  tmp  var
+boot  etc  lib   lib64  media   opt  root  sbin  sys  usr
+
+above we are listing the files and directories default command instruction will be ignored and listing files and directories instead of Hello World.
+
+root@ip-172-31-83-190:~/cmd-entrypoint# cat Dockerfile
+FROM ubuntu
+RUN apt-get update -y
+CMD echo "Hello World"
+CMD echo "Gud Morning"
+CMD echo " We will meet"
+
+There can only be one CMD instruction in a Dockerfile. If you list more than one CMD then only the last CMD will take effect.
+
+root@ip-172-31-83-190:~/cmd-entrypoint# docker build -t cmdimage1 .
+Sending build context to Docker daemon  2.048kB
+Step 1/5 : FROM ubuntu
+ ---> ba6acccedd29
+Step 2/5 : RUN apt-get update -y
+ ---> Using cache
+ ---> 24f646a61983
+Step 3/5 : CMD echo "Hello World"
+ ---> Using cache
+ ---> 4fb118fa8e19
+Step 4/5 : CMD echo "Gud Morning"
+ ---> Running in 626d8eac230c
+Removing intermediate container 626d8eac230c
+ ---> 00c2c2516453
+Step 5/5 : CMD echo " We will meet"
+ ---> Running in a904eae2bf99
+Removing intermediate container a904eae2bf99
+ ---> 61b71c1afb4a
+Successfully built 61b71c1afb4a
+Successfully tagged cmdimage1:latest
+root@ip-172-31-83-190:~/cmd-entrypoint# docker run -it --name=multicmdcontainer cmdimage1 (we can have more than one cmd instruction last cmd will take effect)
+ We will meet
+
+
+
+CMD use case ---- override some parameters like env variable, version and tag number 
+dont want to change the executable/any values  in that case we can use entrypoint
+
+
+3.ENTRYPOINT 
+
+
+FROM ubuntu
+RUN apt-get update -y
+ENTRYPOINT ["/bin/echo", "Hello"]
+CMD ["world"]
+
+root@ip-172-31-83-190:~/cmd-entrypoint# vi Dockerfile
+root@ip-172-31-83-190:~/cmd-entrypoint# docker build -t entrypointimage .
+Sending build context to Docker daemon  2.048kB
+Step 1/4 : FROM ubuntu
+ ---> ba6acccedd29
+Step 2/4 : RUN apt-get update -y
+ ---> Using cache
+ ---> 24f646a61983
+Step 3/4 : ENTRYPOINT ["/bin/echo", "Hello"]
+ ---> Running in f49f1bfcdf5d
+Removing intermediate container f49f1bfcdf5d
+ ---> 6187d013d676
+Step 4/4 : CMD ["world"]
+ ---> Running in ed63cd6cf340
+Removing intermediate container ed63cd6cf340
+ ---> fd9bb0a23fe3
+Successfully built fd9bb0a23fe3
+Successfully tagged entrypointimage:latest
+
+root@ip-172-31-83-190:~/cmd-entrypoint# docker run -it --name=entrypointcontainer entrypointimage not passing paramter it will execute default command value 
+Hello world
+
+root@ip-172-31-83-190:~/cmd-entrypoint# docker run -it --name=entrypointcontainer1  
+
+
+entrypointimage Srinadh (passing paramter it will overirde default command value print Srinadh instead of world)
+
+
+root@ip-172-31-83-190:~/cmd-entrypoint# cat Dockerfile
+FROM ubuntu
+RUN apt-get update -y
+ENTRYPOINT ["/bin/echo", "Hello"]
+ENTRYPOINT ["/bin/echo", "Gud Morning"]
+CMD ["world"]
+
+root@ip-172-31-83-190:~/cmd-entrypoint# docker build -t entrypoint1 .
+Sending build context to Docker daemon  2.048kB
+Step 1/5 : FROM ubuntu
+ ---> ba6acccedd29
+Step 2/5 : RUN apt-get update -y
+ ---> Using cache
+ ---> 24f646a61983
+Step 3/5 : ENTRYPOINT ["/bin/echo", "Hello"]
+ ---> Using cache
+ ---> 6187d013d676
+Step 4/5 : ENTRYPOINT ["/bin/echo", "Gud Morning"]
+ ---> Running in cdd1d0ce8a2c
+Removing intermediate container cdd1d0ce8a2c
+ ---> fc9a822dede6
+Step 5/5 : CMD ["world"]
+ ---> Running in 9225e15c0743
+Removing intermediate container 9225e15c0743
+ ---> 2b68ab402c11
+Successfully built 2b68ab402c11
+Successfully tagged entrypoint1:latest
+root@ip-172-31-83-190:~/cmd-entrypoint# docker run -it --name=entrypointcontainer3  entrypoint1  Srinadh
+Gud Morning Srinadh
+
+we can have more than one ENTRYPOINT instruction last ENTRYPOINT command instruction  will take effect  
+
+
+BottomLine
+-------------
+
+RUN --- Use RUN instructions to build your image by adding layers on top of initial image
+
+Prefer ENTRYPOINT to CMD when building executable Docker image and you need a command always to be executed.Additionally use CMD if you need to provide extra default parameters that could be overwritten from command line when docker container runs.
+
+choose CMD if you need to provide a default command and/or arguments that can be overwritten from command line when docker container runs.
+
+
+1.Can we override entrypoint 
+yes we can but we need to pass all the parameters 
+
+docker run --entrypoint <entrypoint.sh> <image:tag> <arg1> <arg2> <arg3>
+
+root@ip-172-31-83-190:~/cmd-entrypoint# cat Dockerfile
+FROM ubuntu
+RUN apt-get update -y
+ENTRYPOINT ["/bin/echo", "Hello"]
+ENTRYPOINT ["/bin/echo", "Gud Morning"]
+CMD ["world"]
+root@ip-172-31-83-190:~/cmd-entrypoint# docker run -it --name-entrypointcont --entrypoint printdemo "Hello" "Gud Morning" entrypoint1
+
+
+root@ip-172-31-83-190:~/cmd-entrypoint# docker run -it --name=entrypointcont entrypoint1  --entrypoint printdemo "Hello" "Gud Morning"
+Gud Morning --entrypoint printdemo Hello Gud Morning
+
+
+
